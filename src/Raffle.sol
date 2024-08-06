@@ -15,11 +15,16 @@ import {VRFV2PlusClient} from "@chainlink/contracts/v0.8/vrf/dev/libraries/VRFV2
 contract Raffle is VRFConsumerBaseV2Plus {
     /* error messages */
     error Raffle__sendMoreEthToEnterRafel();
+    error Raffle__RaffleNotOpen();
     error Raffle_TransactionFailed();
-    error Raffle__UpKeepNotNeeded(uint256 balance, uint256 players, uint256 raffleState);
+    error Raffle__UpKeepNotNeeded(
+        uint256 balance,
+        uint256 players,
+        uint256 raffleState
+    );
 
     /* type declarations */
-    enum RaffleState{
+    enum RaffleState {
         OPEN,
         CALCULATING
     }
@@ -52,7 +57,7 @@ contract Raffle is VRFConsumerBaseV2Plus {
         address vrfCoordinator,
         bytes32 keyHash,
         uint32 callbackGasLimit,
-        uint256 subscriptionId 
+        uint256 subscriptionId
     ) VRFConsumerBaseV2Plus(vrfCoordinator) {
         i_entryFee = entryFee;
         i_interval = interval;
@@ -68,6 +73,10 @@ contract Raffle is VRFConsumerBaseV2Plus {
             revert Raffle__sendMoreEthToEnterRafel();
         }
 
+        if(s_RaffleState == RaffleState.CALCULATING) {
+            revert Raffle__RaffleNotOpen();
+        }
+
         s_players.push(payable(msg.sender));
 
         emit RaffleEntered(msg.sender);
@@ -79,8 +88,7 @@ contract Raffle is VRFConsumerBaseV2Plus {
 
     function checkUpkeep(
         bytes memory /* checkData */
-    ) public view returns (bool upkeepNeeded, bytes memory /* performData */) 
-    {
+    ) public view returns (bool upkeepNeeded, bytes memory /* performData */) {
         bool timeHasPassed = block.timestamp - s_lastTimestamp > i_interval;
         bool enoughPlayers = s_players.length > 0;
         bool enoughETH = address(this).balance > 0;
@@ -90,12 +98,16 @@ contract Raffle is VRFConsumerBaseV2Plus {
     }
 
     function performUpkeep(bytes calldata /* performData */) external {
-        (bool upkeepNeeded,) = checkUpkeep("");
+        (bool upkeepNeeded, ) = checkUpkeep("");
 
-        if(!upkeepNeeded) {
-            revert Raffle__UpKeepNotNeeded(address(this).balance, s_players.length, uint256(s_RaffleState));
+        if (!upkeepNeeded) {
+            revert Raffle__UpKeepNotNeeded(
+                address(this).balance,
+                s_players.length,
+                uint256(s_RaffleState)
+            );
         }
-    
+
         s_RaffleState = RaffleState.CALCULATING;
 
         VRFV2PlusClient.RandomWordsRequest memory request = VRFV2PlusClient
@@ -113,19 +125,10 @@ contract Raffle is VRFConsumerBaseV2Plus {
         s_vrfCoordinator.requestRandomWords(request);
     }
 
-    function getEntryFee() external view returns (uint256) {
-        return i_entryFee;
-    }
-
-    function getRaffleState() external view returns (RaffleState) {
-        return s_RaffleState;
-    }
-
     function fulfillRandomWords(
         uint256 /*requestId*/,
         uint256[] calldata randomWords
     ) internal override {
-
         /* Checks */
 
         /* Effects */
@@ -142,6 +145,17 @@ contract Raffle is VRFConsumerBaseV2Plus {
         if (!success) {
             revert Raffle_TransactionFailed();
         }
-        
+    }
+
+    function getEntryFee() external view returns (uint256) {
+        return i_entryFee;
+    }
+
+    function getRaffleState() external view returns (RaffleState) {
+        return s_RaffleState;
+    }
+
+    function getPlayer(uint256 index) external view returns (address) {
+        return s_players[index];
     }
 }
