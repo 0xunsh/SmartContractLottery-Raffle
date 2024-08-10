@@ -45,6 +45,7 @@ contract Raffle is VRFConsumerBaseV2Plus {
     /* events */
     event RaffleEntered(address indexed player);
     event WinnerPicked(address indexed winner);
+    event RequestRaffleWinner(uint256 indexed requestId);
 
     /*s_vrfCoordinator is an interface instance used to interact with 
     a deployed contract at _vrfCoordinator that implements the IVRFCoordinatorV2Plus interface. 
@@ -122,7 +123,8 @@ contract Raffle is VRFConsumerBaseV2Plus {
                 )
             });
 
-        s_vrfCoordinator.requestRandomWords(request);
+        uint256 requestId = s_vrfCoordinator.requestRandomWords(request);
+        emit RequestRaffleWinner(requestId);
     }
 
     function fulfillRandomWords(
@@ -157,5 +159,17 @@ contract Raffle is VRFConsumerBaseV2Plus {
 
     function getPlayer(uint256 index) external view returns (address) {
         return s_players[index];
+    }
+
+    function getPlayersCount() external view returns (uint256) {
+        return s_players.length;
+    }
+
+    function getRecentWinner() external view returns (address) {
+        return s_recentWinner;
+    }
+
+    function getLastTimeStamp() external view returns (uint256) {
+        return s_lastTimestamp;
     }
 }

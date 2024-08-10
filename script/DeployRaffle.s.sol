@@ -8,6 +8,11 @@ import {HelperConfig} from "./HelperConfig.s.sol";
 import {CreateSubscription, FundSubscription, AddConsumer} from "./Interactions.s.sol";
 
 contract DeployContract is Script {
+
+    function run() public returns (Raffle, HelperConfig) {
+        DeployRaffle();
+    }
+
     function DeployRaffle() public returns (Raffle, HelperConfig) {
         HelperConfig helperConfig = new HelperConfig();
         HelperConfig.NetworkConfig memory config = helperConfig.getConfig();
@@ -40,6 +45,4 @@ contract DeployContract is Script {
         addConsumer.addConsumer(address(raffle), config.vrfCoordinator, config.subscriptionId);
         return (raffle, helperConfig);
     }
-
-    function run() public returns (Raffle, HelperConfig) {}
 }
